@@ -12,7 +12,7 @@ WHAT THIS SCRIPT DOES:
   Delivers D1 — "Clean, calibrated pyrometer time-series using the
   2-pyrometer + thermocouple experiment."
 
-  Since the real AP&T 2-pyrometer + thermocouple dataset is not yet
+  Since the real PTC 2-pyrometer + thermocouple dataset is not yet
   available, this script builds a physically realistic simulation using
   the NIST Layer01 hot-spot signal as the true underlying temperature,
   then adds:
@@ -20,7 +20,7 @@ WHAT THIS SCRIPT DOES:
     • Pyrometer 2 — emissivity error (ε=0.72) + noise + slow drift
     • Thermocouple — clean reference with slight thermal lag
 
-  NOTE: When the real AP&T data arrives, replace STEP 0 with:
+  NOTE: When the real PTC data arrives, replace STEP 0 with:
         df = pd.read_csv('real_apt_data.csv')
         T_pyr1_raw, T_pyr2_raw, T_tc = df['pyr1'], df['pyr2'], df['tc']
         All downstream steps work unchanged.
@@ -130,7 +130,7 @@ def build_simulation(T_true_raw: np.ndarray,
     """
     Build a physically realistic 2-pyrometer + thermocouple simulation
     representing the macroscopic thermal cycle of the metal part in the
-    AP&T sheet metal forming / heat treatment process (matching Figure 4.1
+    PTC sheet metal forming / heat treatment process (matching Figure 4.1
     and Table 5.1 in the Master's thesis).
 
     Parameters

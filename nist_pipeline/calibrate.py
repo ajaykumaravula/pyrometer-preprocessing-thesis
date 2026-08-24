@@ -36,7 +36,7 @@ HOW TO USE:
 
 SWAP DATA:
   All functions accept numpy arrays — works with both simulated
-  and real AP&T 2-pyrometer + thermocouple data unchanged.
+  and real PTC 2-pyrometer + thermocouple data unchanged.
 =============================================================================
 """
 

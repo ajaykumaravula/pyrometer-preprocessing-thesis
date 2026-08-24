@@ -6,7 +6,7 @@
 
 **Author:** Ajay Kumar Avula  
 **Institution:** Department of Engineering Science, University West, Trollhättan, Sweden  
-**Industrial Partner:** AP&T AB  
+**Industrial Partner:** Produktionstekniskt Centrum (PTC)  
 **Thesis:** *Automation of Pyrometer Data Pre-processing (Denoising, Calibration, and Compression) for Metal Forming and Additive Manufacturing*  
 **Individual Contribution:** ATP-2 Temperature Calibration & ATP-3 Neural Compression
 
