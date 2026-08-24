@@ -1,3 +1,4 @@
+from scipy.ndimage import gaussian_filter1d
 """
 =============================================================================
 two_pyrometer_pipeline.py  —  D1: Clean Calibrated Pyrometer Time-Series
@@ -195,45 +196,15 @@ def build_simulation(T_true_raw: np.ndarray,
 
 
 # =============================================================================
-# STEP 1 — DENOISING
-# (Uses partner's approach: median filter + Gaussian smooth)
+# STEP 1 — INPUT SIGNAL PREPARATION (ATP-2 Input Interface)
 # =============================================================================
 
-def _gauss_smooth(signal: np.ndarray, sigma: float = 3.0) -> np.ndarray:
+def prepare_input_signal(signal: np.ndarray) -> np.ndarray:
     """
-    Convolve signal with a Gaussian kernel of given sigma.
-    Private helper — called by denoise_signal().
+    Prepares and formats incoming pyrometer time-series signals
+    for ATP-2 temperature calibration algorithms.
     """
-    half_w = int(4 * sigma + 1)
-    x      = np.arange(-half_w, half_w + 1, dtype=np.float64)
-    kernel = np.exp(-0.5 * (x / sigma) ** 2)
-    kernel /= kernel.sum()
-    return np.convolve(signal.astype(np.float64), kernel, mode='same')
-
-
-def denoise_signal(signal: np.ndarray,
-                   median_kernel: int = 7,
-                   gauss_sigma: float = 3.0) -> np.ndarray:
-    """
-    Denoise a 1-D temperature time-series.
-
-    Step 1 — Median filter  : removes impulse spikes
-    Step 2 — Gaussian smooth: reduces residual high-frequency noise
-
-    Parameters
-    ----------
-    signal        : raw temperature array (°C)
-    median_kernel : window size for median filter (must be odd)
-    gauss_sigma   : standard deviation for Gaussian kernel
-
-    Returns
-    -------
-    np.ndarray — denoised signal, same length as input
-    """
-    if median_kernel % 2 == 0:
-        median_kernel += 1              # kernel must be odd
-    sig_med = medfilt(signal.astype(np.float64), kernel_size=median_kernel)
-    return _gauss_smooth(sig_med, sigma=gauss_sigma)
+    return signal.astype(np.float64)
 
 
 # =============================================================================
@@ -271,7 +242,7 @@ def calibrate_mean_offset(T_pyr: np.ndarray,
 
     Parameters
     ----------
-    T_pyr        : denoised pyrometer signal (°C)
+    T_pyr        : input pyrometer signal (°C)
     T_ref        : thermocouple reference signal (°C)
     cal_fraction : fraction of data used for calibration window
 
@@ -299,7 +270,7 @@ def calibrate_linear(T_pyr: np.ndarray,
 
     Parameters
     ----------
-    T_pyr        : denoised pyrometer signal (°C)
+    T_pyr        : input pyrometer signal (°C)
     T_ref        : thermocouple reference signal (°C)
     cal_fraction : fraction of data used for calibration window
 
@@ -333,7 +304,7 @@ def calibrate_polynomial(T_pyr: np.ndarray,
 
     Parameters
     ----------
-    T_pyr        : denoised pyrometer signal (°C)
+    T_pyr        : input pyrometer signal (°C)
     T_ref        : thermocouple reference signal (°C)
     cal_fraction : fraction of data used for calibration window
     degree       : polynomial degree (2 recommended)
@@ -369,7 +340,7 @@ def calibrate_piecewise(T_pyr: np.ndarray,
 
     Parameters
     ----------
-    T_pyr        : denoised pyrometer signal (°C)
+    T_pyr        : input pyrometer signal (°C)
     T_ref        : thermocouple reference signal (°C)
     cal_fraction : fraction of data used for calibration window
     n_segments   : number of temperature segments
@@ -438,7 +409,7 @@ def calibrate_random_forest(T_pyr: np.ndarray,
 
     Parameters
     ----------
-    T_pyr        : denoised pyrometer signal (°C)
+    T_pyr        : input pyrometer signal (°C)
     T_ref        : thermocouple reference signal (°C)
     cal_fraction : fraction of data used for training
 
@@ -483,7 +454,7 @@ def calibrate_mlp(T_pyr: np.ndarray,
 
     Parameters
     ----------
-    T_pyr        : denoised pyrometer signal (°C)
+    T_pyr        : input pyrometer signal (°C)
     T_ref        : thermocouple reference signal (°C)
     cal_fraction : fraction of data used for training
 
@@ -540,7 +511,7 @@ def calibrate_gradient_boosting(T_pyr: np.ndarray,
 
     Parameters
     ----------
-    T_pyr        : denoised pyrometer signal (°C)
+    T_pyr        : input pyrometer signal (°C)
     T_ref        : thermocouple reference signal (°C)
     cal_fraction : fraction of data used for training
 
@@ -587,7 +558,7 @@ def calibrate_svr(T_pyr: np.ndarray,
 
     Parameters
     ----------
-    T_pyr        : denoised pyrometer signal (°C)
+    T_pyr        : input pyrometer signal (°C)
     T_ref        : thermocouple reference signal (°C)
     cal_fraction : fraction of data used for training
 
@@ -649,8 +620,8 @@ def fuse_pyrometers(T_pyr1_cal: np.ndarray,
     w2_pct  : float      — weight given to pyrometer 2 (%)
     """
     # Estimate noise as std of (signal - heavily smoothed baseline)
-    sigma1 = np.std(T_pyr1_cal - _gauss_smooth(T_pyr1_cal, sigma=15)) + 1e-9
-    sigma2 = np.std(T_pyr2_cal - _gauss_smooth(T_pyr2_cal, sigma=15)) + 1e-9
+    sigma1 = np.std(T_pyr1_cal - gaussian_filter1d(T_pyr1_cal, sigma=15.0)) + 1e-9
+    sigma2 = np.std(T_pyr2_cal - gaussian_filter1d(T_pyr2_cal, sigma=15.0)) + 1e-9
 
     w1, w2   = 1.0 / sigma1**2, 1.0 / sigma2**2
     T_fused  = (w1 * T_pyr1_cal + w2 * T_pyr2_cal) / (w1 + w2)
@@ -667,7 +638,7 @@ def fuse_pyrometers(T_pyr1_cal: np.ndarray,
 def run_pipeline(data_dir: str) -> None:
     """
     Run the full D1 pipeline:
-      Load → Simulate → Denoise → Calibrate (8 methods) → Fuse → Save → Plot
+      Load → Simulate → Calibrate (ATP-2) (8 methods) → Fuse → Save → Plot
 
     Parameters
     ----------
